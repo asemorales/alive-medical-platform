@@ -1,0 +1,238 @@
+
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+
+% Core packages
+\usepackage{amsmath,amssymb}
+\usepackage{tikz-cd}
+\usepackage{multicol}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+
+% Paragraphs
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1\baselineskip}
+
+\title{A Reliability-Centered Workflow Layer for Tuberculosis CAD in Hospital Chest X-Ray Screening}
+\author{ALIVE / Prism Draft}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\section{Working Thesis}
+
+\textbf{Baseline TB/CXR model feasibility is largely established}. WHO has recommended CAD for TB screening since 2021 and, in its June 2025 policy update, reported that six CAD products met WHO performance standards for TB screening in people aged 15 years and older. More broadly, chest X-ray AI reviews consistently report strong diagnostic performance across tasks, while a 2024 study found that AI assistance raised physician AUC from 0.773 to 0.874 and helped non-radiologists perform on par with radiologists. In a real-world reporting study, radiologists showed complete agreement with model findings in 86.5\% of reviewed cases, with only 0.5\% of findings deemed missed by the model. Taken together, these results justify treating raw model accuracy and basic feasibility as comparatively solved background for this paper, while shifting attention to the unsolved question of reliable hospital integration.\footnote{WHO policy statement overview, \url{https://www.who.int/publications/i/item/9789240110373}.}\footnote{WHO approval update, \url{https://www.who.int/news/item/11-06-2025-who-approves-six-software-products-for-computer-aided-detection-of-tb-on-chest-x-ray}.}\footnote{Systematic review, \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9955112/}.}\footnote{Pamela G. Anderson et al., ``Deep learning improves physician accuracy in the comprehensive detection of abnormalities on chest X-rays,'' \url{https://www.nature.com/articles/s41598-024-76608-2}.}\footnote{Real-world observational study, \url{https://pubmed.ncbi.nlm.nih.gov/34930738/}.}
+
+
+This paper should be framed as an \emph{academic prototype and workflow implementation} contribution rather than as ``another tuberculosis classifier.'' The central claim is that chest X-ray deep learning for TB is already strong enough to justify a shift in emphasis toward \textbf{reliability safeguards and prototype feature integration for real hospital use}. The proposed system therefore combines \textbf{input quality gating, explicit uncertainty-aware deferral, clinically grounded multimodal explainability, trainee support, and post-deployment monitoring} on top of a mature TB scoring backbone. Systematic and implementation-focused reviews repeatedly note that the value of chest X-ray AI in practice depends not only on accuracy, but also on workflow fit, clinician interaction, local validation, and ongoing quality assurance.
+
+\textbf{Why this narrative is cohesive:}
+\begin{itemize}[leftmargin=1.5em]
+    \item It uses model performance only as background motivation, not as the claimed novelty.
+    \item It unifies the selected features under one layer: \textbf{reliability}. Quality gating protects the input, explicit deferral protects the decision, multimodal explanation protects interpretability, trainee support protects interpretation by less-experienced users, and monitoring protects deployment over time.
+    \item It fits the practical medical deployment angle better than a purely technical CV paper, especially for hospital integration and L1/L2 settings.
+\end{itemize}
+
+\textbf{Core evidence to anchor the paper:}
+\begin{itemize}[leftmargin=1.5em]
+    \item Reviews of chest X-ray AI deployment note that only a limited share of studies are prospective or clinically embedded, and that workflow integration, local testing, and human factors remain under-studied.\footnote{M. H. Mongan et al., ``A review of practical AI in chest radiography,'' \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10128969/}.}
+    \item Reviews of AI for chest radiographs argue that expertise, usability, and implementation context remain essential even when model performance is strong.\footnote{N. A. M. et al., ``Artificial intelligence for chest radiograph interpretation in clinical practice,'' \url{https://www.mdpi.com/2075-4418/13/4/743}.}
+    \item A systematic review of AI for chest X-ray interpretation highlights strong diagnostic performance overall, but limited prospective validation and real-world evidence.\footnote{A. D. et al., ``Artificial intelligence for chest x-ray interpretation: a systematic review,'' \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9955112/}.}
+\end{itemize}
+
+\section{Alternative Narratives Considered}
+
+\begin{longtable}{p{0.21\textwidth} p{0.24\textwidth} p{0.25\textwidth} p{0.22\textwidth}}
+\toprule
+\textbf{Narrative} & \textbf{Why It Was Attractive} & \textbf{Main Risk / Why Not Selected} & \textbf{Evidence to Cite} \\
+\midrule
+TB-specific classifier improvement & Clear CV story; easy to describe as a model paper & Weak novelty because TB chest X-ray CAD is already mature, commercially deployed, and extensively benchmarked; difficult to outperform convincingly within one month & WHO approval of six CAD products for TB on chest X-ray; broad literature on strong CXR DL performance.\footnote{WHO, ``WHO approves six software products for computer-aided detection of TB on chest X-ray,'' \url{https://www.who.int/news/item/11-06-2025-who-approves-six-software-products-for-computer-aided-detection-of-tb-on-chest-x-ray}.} \\
+
+Threshold calibration as main contribution & Strong Philippine relevance; ties to local context and hospital constraints & Already partially addressed by WHO calibration guidance, CAD4TB dynamic-threshold tooling, and a 2025 Philippine qXR study showing the tradeoff; good motivation, but not enough as headline novelty & WHO local calibration guidance; Philippine qXR study; CAD4TB product positioning.\footnote{WHO Kobe Centre, ``Determining the local calibration of CAD thresholds and other parameters,'' \url{https://wkc.who.int/resources/publications/i/item/determining-the-local-calibration-of-computer-assisted-detection-(cad)-thresholds-and-other-parameters}.}\footnote{A. Marquez et al., ``Performance of chest x-ray with computer-aided detection as a triage test for pulmonary TB in the Philippines,'' \url{https://bmcglobalpublichealth.biomedcentral.com/articles/10.1186/s44263-025-00198-y}.}\footnote{Delft Imaging, CAD4TB product page, \url{https://delft.care/cad4tb-solution/}.} \\
+
+Educational mode as primary narrative & Fits ALIVE's broader mission; helpful for junior clinicians and students & Best kept as a secondary contribution because evidence is less direct and conference fit is stronger when education is attached to a deployment problem & Use implementation and usability literature, plus saliency/interpretability limitations, as indirect support.\footnote{Oakden-Rayner et al., usability study, \url{https://pubmed.ncbi.nlm.nih.gov/36189838/}.} \\
+
+Cost-effectiveness / cost-savings paper & High policy relevance; strong practical appeal in the Philippines & Difficult to argue convincingly in this paper because publicly available Philippine cost figures are fragmented across facility tariffs and modeled studies, and they do not directly capture hospital-level AI-CAD workflow costs, downstream utilization, or implementation effects without a local pilot & Can be mentioned in Discussion as future work rather than central claim. \\
+
+Analog-film / smartphone capture for low-resource provinces & Strong L1/L2 relevance; could expand access where digital workflows are incomplete & Domain shift, regulatory scope, and image-quality variability make it risky without dedicated evaluation; safer as a quality-gating or deferral subcase than as the main narrative & Studies on photographed radiographs plus vendor input constraints.\footnote{M. Nasser et al., photographed analog chest radiograph pilot, \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC12955127/}.}\footnote{qXR documentation, accepted input workflow, \url{https://documentation.qure.ai/api/platform-api/get-started/qxr}.} \\
+\bottomrule
+\end{longtable}
+
+\section{Product Comparison}
+
+In particular, we found the clearest market gap for \textbf{trainee mode}, for \textbf{clinically grounded multimodal explanation of findings in natural language}, and for a \textbf{combined user-facing workflow layer} that joins input QA, explicit deferral, explanation, and trainee-oriented support. We found partial evidence of input-quality handling for Siemens through an internal input quality gate, but not comparable clear user-facing evidence in the other reviewed official materials.
+
+{\scriptsize
+\begin{longtable}{p{0.21\textwidth} p{0.1\textwidth} p{0.1\textwidth} p{0.1\textwidth} p{0.1\textwidth} p{0.1\textwidth} p{0.1\textwidth}}
+\toprule
+\textbf{Feature} & \textbf{qXR} & \textbf{CAD4TB+} & \textbf{Lunit INSIGHT CXR} & \textbf{Annalise Enterprise CXR} & \textbf{Siemens AI-Rad Companion} & \textbf{Proposed system} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Feature} & \textbf{qXR} & \textbf{CAD4TB+} & \textbf{Lunit INSIGHT CXR} & \textbf{Annalise Enterprise CXR} & \textbf{Siemens AI-Rad Companion} & \textbf{Proposed system} \\
+\midrule
+\endhead
+TB support & $\checkmark$\footnote{qXR supports chest X-ray interpretation and workflow integration for TB-related screening use cases: \url{https://documentation.qure.ai/api/platform-api/get-started/qxr}.} & $\checkmark$\footnote{CAD4TB is specifically positioned for TB detection on chest X-ray: \url{https://delft.care/cad4tb/}.} & $\checkmark$\footnote{Lunit states that INSIGHT CXR supports tuberculosis screening: \url{https://www.lunit.io/en/products/cxr?trk=test}.} &  &  & $\checkmark$\footnote{This outline assumes a mature TB scoring module as the predictive baseline rather than the main novelty of the paper.} \\
+
+Localization / overlay & $\checkmark$\footnote{Qure documentation describes heatmap thumbnails and overlay highlighting of abnormal areas: \url{https://documentation.qure.ai/release-notes/qure.ai-app}; \url{https://documentation.qure.ai/}.} & $\checkmark$\footnote{CAD4TB provides a radiological heatmap / coloured overlay on the original chest X-ray: \url{https://delft.care/cad4tb/}.} & $\checkmark$\footnote{Lunit says the system highlights thoracic abnormalities and supports current-prior comparison with progression tracking: \url{https://www.lunit.io/en/products/cxr?trk=test}.} & $\checkmark$\footnote{Annalise describes coloured overlays on the image to localize findings: \url{https://www.annalise.ai/CXR}.} & $\checkmark$\footnote{Siemens documentation describes highlighted findings with localization information on the image: \url{https://academy.siemens-healthineers.com/_/en-us/chest-x-ray-confirmation-workflow/}; \url{https://academy.siemens-healthineers.com/_/en-us/whitepaper-operating-characteristics-and-algorithm-performance-ai-rad-companion-chest-x-ray/}.} & $\checkmark$\footnote{Proposed structured evidence interface with localized visual evidence in this paper outline.} \\
+
+Worklist / prioritization & $\checkmark$\footnote{Qure provides a worklist panel, AI-based prioritization, notification settings, and critical/routine triage status: \url{https://documentation.qure.ai/users-manual/qure.ai-app-users-manual/qure.ai-app-features/windows-mac-os-app-ui/worklist-panel}; \url{https://documentation.qure.ai/users-manual/qure.ai-app-users-manual/qure.ai-app-features/windows-mac-os-app-ui/navigation-toolbar/settings/notification-settings}; \url{https://documentation.qure.ai/api/platform-api/api-specifications/fetching-results}.} &  & $\checkmark$\footnote{Lunit describes AI-integrated worklists, surfacing critical cases, and workload reduction: \url{https://www.lunit.io/en/products/cxr?trk=test}.} & $\checkmark$\footnote{Annalise describes AI-powered worklist prioritisation and notification of urgent cases: \url{https://annalise.ai/annalise-enterprise-cxr/}; \url{https://www.annalise.ai/CXR}.} &  &  \\
+
+Threshold tuning &  & $\checkmark$\footnote{CAD4TB advertises a dynamic-threshold feature that suggests optimized thresholds based on previous results and testing capacity: \url{https://delft.care/cad4tb/}.} &  &  &  & $\checkmark$\footnote{Thresholding is retained as a configurable part of reliability logic, not as the paper's main novelty.} \\
+
+Monitoring / analytics & $\checkmark$\footnote{Qure markets qTrack/customized dashboards to monitor program health and care coordination: \url{https://www.qure.ai/}.} & $\checkmark$\footnote{CAD4TB describes an insights module for management and centralized synchronization across sites: \url{https://delft.care/cad4tb/}.} & $\checkmark$\footnote{Lunit markets INSIGHT Manager 2.0 as integrated monitoring and analytics for day-to-day use and setting refinement: \url{https://www.lunit.io/en/products/cxr?trk=test}.} &  &  & $\checkmark$\footnote{Proposed post-deployment monitoring module in this paper outline.} \\
+
+Input QA gate &  &  &  &  & $\checkmark$\footnote{Siemens describes a pre-defined DICOM input quality gate; for this comparison, input QA is therefore treated as subsumed by their documented input quality gate rather than exposed as a separate user-facing workflow layer: \url{https://academy.siemens-healthineers.com/_/en-us/whitepaper-operating-characteristics-and-algorithm-performance-ai-rad-companion-chest-x-ray/}.} & $\checkmark$\footnote{Proposed input QA gate in this paper outline.} \\
+
+Explicit uncertainty / deferral &  &  &  &  & $\checkmark$\footnote{Siemens presents AI-confidence scores and thresholded highlighting, but not an explicit deferral workflow: \url{https://academy.siemens-healthineers.com/_/en-us/chest-x-ray-confirmation-workflow/}.} & $\checkmark$\footnote{Proposed uncertainty-aware deferral module in this paper outline.} \\
+
+Natural-language multimodal explanation &  &  &  &  &  & $\checkmark$\footnote{Proposed clinically grounded multimodal explainability layer: a VQA / natural-language explanation module for findings in this academic prototype.} \\
+
+Trainee mode &  &  &  &  &  & $\checkmark$\footnote{Proposed trainee support mode in this paper outline.} \\
+\bottomrule
+\end{longtable}
+}
+
+\section{Selected Narrative: A Reliability-Centered Workflow Layer for TB CAD Deployment}
+
+\subsection{One-Sentence Claim}
+
+We propose a \textbf{prototype reliability-centered workflow layer} for tuberculosis CAD on chest X-ray that improves hospital deployability by screening poor-quality inputs, explicitly deferring uncertain cases, explaining findings in natural language, and supporting trainee or non-radiologist use, rather than claiming novelty in the underlying TB classifier itself. Post-deployment monitoring is retained as a supporting operational layer.
+
+\subsection{Reliability Layer Modules}
+
+\textbf{Mature baseline module:}
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{TB scoring module (mature / not the main novelty).} Use a practical TB classifier based on prior literature and public datasets as the predictive core, while making clear that this module is inherited from a mature research line rather than presented as the paper's main novelty.\footnote{Lakhani and Sundaram, \url{https://doi.org/10.1148/radiol.2017162326}.}\footnote{Pasa et al., \url{https://doi.org/10.1038/s41598-019-42557-4}.}
+\end{itemize}
+
+\textbf{New workflow-layer modules proposed in this paper:}
+\begin{enumerate}[leftmargin=1.8em]
+    \item \textbf{Input QA module.} Detect poor positioning, clipped lungs, rotation, poor exposure, blur, and non-standard inputs such as photographed films. If quality is inadequate, the system warns, recommends reacquisition, or routes the case to manual review. This is justified by the known effect of acquisition quality and domain shift on chest X-ray AI reliability.\footnote{Mongan et al., \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10128969/}.}\footnote{Generalization and shortcut-learning concerns: \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10047562/}.}
+    \item \textbf{Uncertainty / deferral module.} Present ``uncertain'' as an explicit output state for near-threshold, low-quality, or out-of-distribution cases. This turns thresholding into a safety mechanism rather than the headline contribution. In the reviewed official product materials, we did not find comparably clear evidence of an explicit user-facing deferral workflow. The usability literature supports the need to communicate model confidence carefully.\footnote{Oakden-Rayner et al., \url{https://pubmed.ncbi.nlm.nih.gov/36189838/}.}
+    \item \textbf{Structured evidence interface.} Show score, threshold band, quality status, and localized visual evidence in a compact panel.
+    \item \textbf{Clinically grounded multimodal explainability module.} Add a VQA / natural-language explanation layer that translates model findings into user-facing textual explanations of suspected abnormalities and their visual basis. This is now treated as an officially proposed prototype feature rather than a rejected narrative, with the paper framed around implementation rather than mature clinical validation.
+    \item \textbf{Trainee support mode.} Add a second view that explains what the system flagged, how quality issues affect trust, and what a junior clinician should inspect first. This can be implemented as a lightweight UI layer and is explicitly a secondary contribution tied to usability and teachability. In the reviewed official product materials, we did not find clear evidence of a comparable trainee-facing clinical mode. This is also consistent with usability testing in which many users suggested AI chest X-ray tools would be more useful in understaffed radiology departments or for trainees and non-radiologist specialties.\footnote{Cheung et al., ``U``AI'' Testing: User Interface and Usability Testing of a Chest X-ray AI Tool in a Simulated Real-World Workflow,'' users suggested deployment in understaffed radiology departments and for trainees/non-radiologist specialties, \url{https://journals.sagepub.com/doi/10.1177/08465371221131200}.}
+    \item \textbf{Post-deployment monitoring module.} Track rates of poor-quality inputs, uncertain cases, deferrals, threshold-borderline cases, reviewer overrides, and possible drift in score distributions over time. Reviews and vendor messaging both support the need for post-launch monitoring, but this is treated here as a supporting operational layer rather than the clearest novelty claim.\footnote{Mongan et al., \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10128969/}.}\footnote{Lunit INSIGHT CXR / monitoring positioning, \url{https://www.lunit.io/en/ai-radiology-software/insight-cxr/}.}
+\end{enumerate}
+
+\subsection{Why This Is the Best Fit}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{It is cohesive.} The feature set is not a grab bag if framed around one pipeline: \emph{check the input, qualify the prediction, and monitor the system after deployment.}
+    \item \textbf{It is implementable this month.} A quality gate, uncertainty rule, and monitoring interface are much more feasible than building a clinically faithful multimodal explanation engine.
+    \item \textbf{It is evidence-backed.} The literature repeatedly identifies real-world workflow integration, local evaluation, and post-launch monitoring as unresolved problems in chest radiography AI.\footnote{Mongan et al., \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10128969/}.}\footnote{Systematic review, \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9955112/}.}
+    \item \textbf{It leaves room for a secondary trainee contribution.} The same interface can expose a learner-facing view without requiring a separate educational AI model.
+    \item \textbf{Why not make it only a monitoring paper?} A monitoring-only contribution is feasible, but too thin on its own because post-deployment metrics need upstream events to observe. In practice, the most meaningful things to monitor are exactly the outputs of the QA and uncertainty layers, so a broader workflow-layer framing is stronger and better integrated.
+\end{itemize}
+
+\section{Paper Outline}
+
+\subsection{Abstract Outline}
+
+\begin{enumerate}[leftmargin=1.8em]
+    \item \textbf{Background:} TB remains a high-burden problem in the Philippines, and CAD for chest radiography is already sufficiently mature to motivate real deployment concerns rather than purely algorithmic ones. WHO has recommended CAD for TB screening since 2021, and six products met WHO performance standards in the 2025 update.\footnote{WHO policy statement overview, \url{https://www.who.int/publications/i/item/9789240110373}.}\footnote{WHO TB CAD approval update, \url{https://www.who.int/news/item/11-06-2025-who-approves-six-software-products-for-computer-aided-detection-of-tb-on-chest-x-ray}.}
+    \item \textbf{Problem:} Existing literature and products show strong detection capability, but workflow fit, local validation, quality assurance, and reliability signaling remain underdeveloped in routine hospital use.\footnote{Mongan et al., \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10128969/}.}\footnote{Systematic review, \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9955112/}.}
+    \item \textbf{Approach:} Present a reliability layer composed of input QA, uncertainty-aware deferral, a structured evidence panel, and monitoring/audit functions around a TB CAD model.
+    \item \textbf{Expected contribution:} A practical hospital-facing system design and evaluation framework for safer and more teachable TB CAD deployment.
+\end{enumerate}
+
+\subsection{1. Introduction and Evidence Gap}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item Introduce Philippine TB burden and the appeal of chest X-ray triage.
+    \item Establish for a non-specialist reader that CAD feasibility is already strong: WHO has recommended CAD for TB screening since 2021, and six products met WHO performance standards in the June 2025 update.\footnote{WHO policy statement overview, \url{https://www.who.int/publications/i/item/9789240110373}.}\footnote{WHO TB CAD approval update, \url{https://www.who.int/news/item/11-06-2025-who-approves-six-software-products-for-computer-aided-detection-of-tb-on-chest-x-ray}.}
+    \item Summarize the broader chest X-ray AI evidence base: systematic reviews report strong overall performance, and newer reader studies show that AI assistance can elevate non-radiologists to radiologist-level performance on chest X-ray tasks.\footnote{Systematic review, \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9955112/}.}\footnote{Anderson et al., \url{https://www.nature.com/articles/s41598-024-76608-2}.}
+    \item Add a concrete clinical acceptance signal: in a real-world observational study, radiologists showed complete agreement with model findings in 86.5\% of cases, suggesting that the field is beyond the stage of asking only whether AI can reach useful accuracy.\footnote{Real-world observational study, \url{https://pubmed.ncbi.nlm.nih.gov/34930738/}.}
+    \item Introduce the workflow evidence gap directly inside the introduction: reviews report limited prospective workflow studies, limited monitoring discussion, and incomplete understanding of clinician interaction with AI outputs. Usability testing also found that many users believed chest X-ray AI tools would be more useful in understaffed radiology departments or for trainees and non-radiologist specialties.\footnote{Mongan et al., \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10128969/}.}\footnote{Systematic review, \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9955112/}.}\footnote{Cheung et al., \url{https://journals.sagepub.com/doi/10.1177/08465371221131200}.}
+    \item Transition from ``accuracy solved enough'' to the actual paper gap: unreliable image inputs, uncertainty communication, non-radiologist use, local workflow fit, and limited post-launch monitoring.
+    \item End with the thesis that the paper focuses on a reliability-centered deployment layer for hospital TB CAD.
+\end{itemize}
+
+\subsection{2. System Framing and Design Goals}
+
+\textbf{Prototype-oriented research question:} Can an academic prototype that integrates input QA, uncertainty-aware deferral, clinically grounded multimodal explanation, trainee support, and monitoring on top of a mature TB CAD backbone provide a more implementation-ready hospital screening workflow than a classifier-only baseline under preliminary evaluation?
+
+\textbf{Design goals:}
+\begin{enumerate}[leftmargin=1.8em]
+    \item Reject or flag unsafe inputs before inference.
+    \item Avoid overconfident automation by explicitly deferring uncertain cases.
+    \item Provide clinically grounded explanations of flagged findings in natural language.
+    \item Present evidence in a compact workflow-friendly interface.
+    \item Support junior clinicians without depending on full report generation.
+    \item Monitor deployment quality over time.
+\end{enumerate}
+
+\subsection{3. System Architecture}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item Describe data flow from acquisition to QA gate, classifier, uncertainty logic, multimodal explanation layer, UI, and dashboard.
+    \item Clarify where thresholding appears: as a configurable component inside reliability logic, not the main novelty.
+    \item Include a note that photographed-film detection can be treated as a special case under QA and deferral.
+\end{itemize}
+
+\subsection{4. Reliability Layer Components}
+
+\textbf{5.1 Input quality gate}
+\begin{itemize}[leftmargin=1.5em]
+    \item Define quality labels and actions: acceptable, borderline, repeat recommended, manual review required.
+    \item Explain relevance to low-resource and non-standard acquisition settings.
+\end{itemize}
+
+\textbf{5.2 Uncertainty-aware deferral}
+\begin{itemize}[leftmargin=1.5em]
+    \item Define uncertain outputs from threshold proximity, poor quality, or OOD cues.
+    \item Explain why deferral is safer than forced binary prediction.
+\end{itemize}
+
+\textbf{5.3 Structured evidence panel}
+\begin{itemize}[leftmargin=1.5em]
+    \item Show TB score, risk band, image-quality warning, and localized evidence.
+    \item Connect this panel to both visual and textual explanation outputs.
+\end{itemize}
+
+\textbf{5.4 Clinically grounded multimodal explainability}
+\begin{itemize}[leftmargin=1.5em]
+    \item Explain the planned VQA / natural-language explanation layer and the kinds of outputs it should generate for clinicians.
+    \item State explicitly that this is presented as a prototype feature implementation, not as a fully validated clinical explanation system.
+\end{itemize}
+
+\textbf{5.5 Trainee support mode}
+\begin{itemize}[leftmargin=1.5em]
+    \item Present a dual-view interface with extra explanatory cues for learners.
+    \item Frame as secondary contribution in usability/education.
+\end{itemize}
+
+\textbf{5.6 Post-deployment monitoring}
+\begin{itemize}[leftmargin=1.5em]
+    \item Specify metrics: poor-quality input rate, uncertain-case rate, deferral rate, borderline-threshold rate, override rate, repeat-image rate, score drift, and subgroup breakdowns if available.
+    \item Argue that this is more TB hospital-specific than generic enterprise analytics, and note that this monitoring layer could be described as the narrowest standalone contribution if the project scope needs to be reduced further.
+\end{itemize}
+
+\subsection{5. Preliminary Evaluation Plan}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item \textbf{Technical:} classifier performance, quality gate accuracy, uncertainty behavior, explanation examples, and failure-mode examples.
+    \item \textbf{Prototype workflow evaluation:} simulated hospital cases, clinician or student walkthroughs, qualitative usability feedback, and timing measures if feasible.
+    \item \textbf{Reliability outcomes:} proportion of cases filtered by QA, proportion deferred, override behavior, and what failure modes are caught by the safeguards.
+    \item \textbf{Claim boundary:} present the system as an academic prototype with preliminary evaluation, not as a clinically validated workflow intervention.
+\end{itemize}
+
+\subsection{6. Discussion}
+
+\begin{itemize}[leftmargin=1.5em]
+    \item Emphasize that the paper's value is not a new backbone but a richer prototype implementation layer around mature TB CAD.
+    \item Explain why thresholding alone was not selected as the main contribution, even though local thresholds remain important.\footnote{WHO calibration guidance, \url{https://wkc.who.int/resources/publications/i/item/determining-the-local-calibration-of-computer-assisted-detection-(cad)-thresholds-and-other-parameters}.}\footnote{Philippine qXR study, \url{https://bmcglobalpublichealth.biomedcentral.com/articles/10.1186/s44263-025-00198-y}.}
+    \item Explain why cost-effectiveness and smartphone-film workflows are future directions unless supported by stronger local data.
+    \item Reiterate why this narrative fits a practical medical deployment paper.
+\end{itemize}
+
+\subsection{7. Conclusion}
+
+Summarize the paper as a shift from ``can TB CAD classify chest X-rays?'' to ``how can an academic prototype integrate reliability, explanation, and trainee-facing features around mature TB CAD for hospital workflow use?''
+
+\end{document}

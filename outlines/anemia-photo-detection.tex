@@ -1,0 +1,212 @@
+
+    \documentclass[11pt]{article}
+    \usepackage[margin=1in]{geometry}
+
+    % Core packages
+    \usepackage{amsmath,amssymb}
+    \usepackage{tikz-cd}
+    \usepackage{multicol}
+    \usepackage{array}
+    \usepackage{longtable}
+    \usepackage{booktabs}
+    \usepackage{enumitem}
+    \usepackage[hidelinks]{hyperref}
+
+    % Paragraphs
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{1\baselineskip}
+
+    \title{A Pervasive Prenatal Anemia Screening Module: Smartphone Conjunctival Photo Detection for Barangay Health Worker Deployment}
+    \author{ALIVE / Prism Draft}
+    \date{\today}
+
+    \begin{document}
+    \maketitle
+
+    \section{Working Thesis}
+
+    \textbf{Non-invasive anemia screening from smartphone photographs of the palpebral conjunctiva is a technically mature task with no competing clinical platform in the Philippine context.} Published convolutional architectures fine-tuned on conjunctival image datasets routinely report AUC above 0.95 for binary anemia classification, and ensemble approaches (VGG16 + ResNet-50 + InceptionV3) reach AUC near 0.97. Smartphone-based hemoglobin estimation has been demonstrated in \emph{Nature Communications} (Mannino et al.\ 2018, sensitivity 97\%, Hb MAE $\sim$1.0 g/dL) and on retinal fundus images in \emph{Nature Biomedical Engineering} (Mitani et al.\ 2020, Hb MAE 0.67). Taken together, these results justify treating raw classification accuracy as comparatively solved background, while shifting attention to the unsolved question of integrating such a model into a deployable screening module that fits the workflow of frontline community health workers in low-resource settings.\footnote{Mannino et al., ``Smartphone app for non-invasive detection of anemia using only patient-sourced photos,'' \emph{Nature Communications} 9:4924 (2018), \url{https://www.nature.com/articles/s41467-018-07262-2}.}\footnote{Mitani et al., ``Detection of anaemia from retinal fundus images via deep learning,'' \emph{Nature Biomedical Engineering} 4:18--27 (2020).}\footnote{CP-AnemiC dataset, Mendeley Data, DOI: 10.17632/m53vz6b7fx.1.}
+
+    This paper should be framed as a \emph{deployment and platform integration} contribution rather than as ``another anemia classifier.'' The central claim is that conjunctival image classification for anemia is already strong enough to motivate a shift in emphasis toward \textbf{a screening module embedded in a medical platform}, designed for use by barangay health workers (BHWs) during routine prenatal home visits. The proposed module combines a conjunctiva region-of-interest detector, a fine-tuned CNN classifier, GradCAM-based attention verification, and a referral-recommendation interface, integrated into the ALIVE Medical Platform.
+
+    \textbf{Why this narrative is cohesive:}
+    \begin{itemize}[leftmargin=1.5em]
+        \item It uses model performance only as background motivation, not as the claimed novelty.
+        \item It unifies the system around one user: \textbf{the barangay health worker}, whose existing prenatal home-visit workflow already brings them face-to-face with at-risk pregnant women but provides no diagnostic tooling.
+        \item It fits a pervasive-health and point-of-care deployment angle better than a purely technical CV paper, especially for LMIC maternal health equity audiences.
+    \end{itemize}
+
+    \textbf{Core evidence to anchor the paper:}
+    \begin{itemize}[leftmargin=1.5em]
+        \item Anemia prevalence in Philippine pregnant women is approximately 24--26\% nationally and exceeds 25\% in BARMM and Eastern Visayas, based on DOST-FNRI National Nutrition Survey data.
+        \item Community-level screening coverage is effectively zero because complete blood count testing requires a medical technologist at the rural health unit, who is frequently absent.
+        \item BHW smartphone ownership exceeds 90\% in recent digital-readiness studies, making smartphone-based capture realistic for deployment.
+        \item No clinical platform currently integrates conjunctival anemia screening; AnemoCheck is consumer-grade and explicitly non-diagnostic, and NiADA (Monere AI) remains in early validation.
+        \item GradCAM and attention-map verification are increasingly standard in conjunctival anemia detection literature precisely because lighting and background artifacts are documented confounders in smartphone medical imaging.
+    \end{itemize}
+
+    \section{Landscape Comparison}
+
+    \textbf{How to read this table:} a checkmark indicates that the feature is explicitly described in the public materials reviewed for this outline. A blank cell means we did not find clear evidence for that feature in the reviewed materials; it should not be interpreted as proof that the feature is absent. The clearest market gap is for a \textbf{clinical-grade screening platform} that combines conjunctival image capture, classification, attention-based verification, and referral routing for community health worker workflows.
+
+    {\scriptsize
+    \begin{longtable}{p{0.23\textwidth} p{0.12\textwidth} p{0.12\textwidth} p{0.12\textwidth} p{0.12\textwidth} p{0.13\textwidth}}
+    \toprule
+    \textbf{Feature} & \textbf{AnemoCheck} & \textbf{NiADA (Monere AI)} & \textbf{Mannino 2018 prototype} & \textbf{Academic research apps} & \textbf{Proposed system} \\
+    \midrule
+    \endfirsthead
+    \toprule
+    \textbf{Feature} & \textbf{AnemoCheck} & \textbf{NiADA (Monere AI)} & \textbf{Mannino 2018 prototype} & \textbf{Academic research apps} & \textbf{Proposed system} \\
+    \midrule
+    \endhead
+    Anatomical site & Nail bed & Conjunctiva & Nail bed & Conjunctiva (mostly) & Conjunctiva\footnote{Conjunctiva is preferred over nail bed because it is less affected by melanin variability across skin tones, a recurring concern in the anemia detection literature.} \\
+
+    Clinical / diagnostic intent &  & $\checkmark$ (in validation) & $\checkmark$ (research) & $\checkmark$ (research) & $\checkmark$ \\
+
+    Public dataset basis &  &  &  & Partial & $\checkmark$\footnote{CP-AnemiC (710 images, CC BY 4.0) and Eyes-DEFY-ANEMIA (218 images) form a combined $\sim$930-image base.} \\
+
+    Conjunctiva ROI detection &  &  &  & Partial & $\checkmark$ \\
+
+    Attention / GradCAM verification &  &  &  & Partial & $\checkmark$\footnote{GradCAM verifies that the model attends to conjunctival tissue rather than lighting or background artifacts.} \\
+
+    Referral / risk-band output &  &  &  &  & $\checkmark$ \\
+
+    Platform integration &  &  &  &  & $\checkmark$\footnote{Module integrated into the ALIVE Medical Platform, with photo capture, inference, heatmap, and referral recommendation.} \\
+
+    BHW / community workflow fit &  &  &  &  & $\checkmark$ \\
+    \bottomrule
+    \end{longtable}
+    }
+
+    \section{Selected Narrative: A Pervasive Prenatal Anemia Screening Module}
+
+    \subsection{One-Sentence Claim}
+
+    We present a \textbf{non-invasive anemia screening module integrated into a medical platform}, designed for deployment by barangay health workers during routine prenatal home visits, that uses smartphone-captured conjunctival images to provide real-time anemia risk assessment with visual verification through attention heatmaps, filling a gap in the Philippine maternal healthcare pathway where complete blood count testing is unavailable.
+
+    \subsection{Screening Module Components}
+
+    \textbf{Mature baseline component:}
+    \begin{itemize}[leftmargin=1.5em]
+        \item \textbf{Anemia classifier (mature / not the main novelty).} Use a fine-tuned CNN (e.g., EfficientNet-B0 or ResNet-50) trained on the combined CP-AnemiC and Eyes-DEFY-ANEMIA datasets ($\sim$930 images plus augmentation) as the predictive core, while making clear that this component inherits from a mature research line rather than being presented as the paper's main novelty.\footnote{CP-AnemiC dataset, Mendeley Data, DOI: 10.17632/m53vz6b7fx.1.}\footnote{Eyes-DEFY-ANEMIA dataset, Kaggle.}
+    \end{itemize}
+
+    \textbf{New module-layer contributions proposed in this paper:}
+    \begin{enumerate}[leftmargin=1.8em]
+        \item \textbf{Conjunctiva ROI detector.} Locate the palpebral conjunctiva in a smartphone photo using a pre-trained object detector or color-space segmentation, so that downstream classification operates on a standardized region rather than on the full image. This is justified by the documented sensitivity of anemia classifiers to background and lighting artifacts.
+        \item \textbf{Attention-verified classification.} Combine the fine-tuned CNN with GradCAM heatmaps so that every prediction is accompanied by visual evidence of which pixels drove it. The system flags cases where attention falls outside the conjunctival region as potentially unreliable, turning explainability into a real safety check.\footnote{GradCAM via the \texttt{pytorch-grad-cam} library.}
+        \item \textbf{Risk-band output and referral recommendation.} Map the classifier's continuous score into ``low risk,'' ``moderate risk,'' and ``high risk --- refer for CBC,'' so that the BHW receives an actionable next step rather than a raw probability.
+        \item \textbf{Architecture comparison for on-device feasibility.} Report a comparison of EfficientNet-B0, ResNet-50, and MobileNetV2 along accuracy, latency, and model-size axes, framed around the constraint of running on a typical BHW Android device.
+        \item \textbf{Platform integration.} Embed the screening flow into the ALIVE Medical Platform, including photo capture, inference, GradCAM overlay, risk band, and referral recommendation, so that the contribution is a deployable module rather than a notebook experiment.
+    \end{enumerate}
+
+    \subsection{Why This Is the Best Fit}
+
+    \begin{itemize}[leftmargin=1.5em]
+        \item \textbf{It is cohesive.} The components are not a grab bag if framed around one pipeline: \emph{find the conjunctiva, classify it, verify the attention, and recommend the referral.}
+        \item \textbf{It is implementable this month.} ROI detection, fine-tuning on an $\sim$930-image dataset, GradCAM overlays, and a risk-band UI are all feasible within the deadline window for IWISH 2026 (April 15) and EAI PervasiveHealth 2026 late track (April 30).
+        \item \textbf{It is evidence-backed.} The Philippine maternal anemia burden, the absence of CBC access at the community level, and the saturation of BHW smartphone ownership jointly support the deployment framing.
+        \item \textbf{It is a genuinely open field.} Unlike TB CXR (Qure.ai, Lunit, Delft), cervical cancer (Cerv.ai), or oral cancer (BerryCare, Muskan.ai), no clinical-grade conjunctival anemia screening platform exists for the Philippine context.
+        \item \textbf{Why not make it only a classifier paper?} A classifier-only paper would be hard to differentiate from existing AUC-above-0.95 results on the same datasets. Embedding the classifier in a deployable BHW-facing module produces a contribution that is both more novel and better matched to PervasiveHealth and IWISH audiences.
+    \end{itemize}
+
+    \section{Paper Outline}
+
+    \subsection{Abstract Outline}
+
+    \begin{enumerate}[leftmargin=1.8em]
+        \item \textbf{Background:} Maternal anemia is highly prevalent in the Philippines (approximately 24--26\% in pregnant women, exceeding 25\% in BARMM and Eastern Visayas), but community-level hemoglobin screening is effectively absent because complete blood count testing requires a medical technologist who is rarely present at the rural health unit.
+        \item \textbf{Problem:} Existing literature shows that smartphone-based conjunctival anemia classification can reach AUC above 0.95, but no clinical platform integrates this capability into the workflow of frontline community health workers, and lighting and background artifacts remain documented confounders.
+        \item \textbf{Approach:} Present a screening module composed of a conjunctiva ROI detector, a fine-tuned CNN classifier, GradCAM-based attention verification, and a risk-band referral interface, integrated into the ALIVE Medical Platform and designed for barangay health worker deployment during prenatal home visits.
+        \item \textbf{Expected contribution:} A deployable screening module design and preliminary evaluation framework for safer and more workflow-aligned non-invasive anemia detection in low-resource maternal care.
+    \end{enumerate}
+
+    \subsection{1. Introduction and Evidence Gap}
+
+    \begin{itemize}[leftmargin=1.5em]
+        \item Introduce the Philippine maternal anemia burden and the appeal of non-invasive smartphone screening.
+        \item Establish for a non-specialist reader that conjunctival anemia classification is already strong: ensemble CNN approaches reach AUC near 0.97, and \emph{Nature Communications} and \emph{Nature Biomedical Engineering} have published smartphone-based and fundus-based anemia detection respectively.
+        \item Summarize the community health context: BHWs already conduct prenatal home visits, smartphone ownership exceeds 90\%, and CBC access at the community level is effectively zero.
+        \item Introduce the deployment evidence gap directly: no clinical platform integrates conjunctival anemia screening into a frontline workflow, and existing tools such as AnemoCheck are explicitly non-diagnostic.
+        \item Transition from ``accuracy solved enough'' to the actual paper gap: standardized region-of-interest extraction, attention-based reliability checks, actionable referral output, and BHW-facing platform integration.
+        \item End with the thesis that the paper focuses on a pervasive prenatal screening module for non-invasive anemia detection.
+    \end{itemize}
+
+    \subsection{2. System Framing and Design Goals}
+
+    \textbf{Prototype-oriented research question:} Compared with a classifier-only conjunctival anemia detector, can a screening module that combines ROI detection, attention-verified classification, and a risk-band referral interface provide a more deployable and trustworthy point-of-care workflow under preliminary evaluation?
+
+    \textbf{Design goals:}
+    \begin{enumerate}[leftmargin=1.8em]
+        \item Operate from a single smartphone photograph captured by a non-specialist user.
+        \item Standardize the input by detecting and cropping the palpebral conjunctiva before classification.
+        \item Verify that model attention lies on conjunctival tissue rather than on lighting or background artifacts.
+        \item Translate the classifier output into an actionable referral recommendation rather than a raw probability.
+        \item Integrate the flow into the ALIVE Medical Platform so that the contribution is a deployable module.
+    \end{enumerate}
+
+    \subsection{3. System Architecture}
+
+    \begin{itemize}[leftmargin=1.5em]
+        \item Describe data flow from photo capture, to conjunctiva ROI detection, to CNN inference, to GradCAM attention verification, to risk-band mapping, to referral recommendation in the platform UI.
+        \item Clarify that the underlying classifier is treated as a configurable mature component, not as the paper's main novelty.
+        \item Note that the same architecture supports later extension to hemoglobin regression once larger labelled datasets become available.
+    \end{itemize}
+
+    \subsection{4. Module Components}
+
+    \textbf{4.1 Conjunctiva ROI detector}
+    \begin{itemize}[leftmargin=1.5em]
+        \item Compare a lightweight pre-trained object detector against a color-space segmentation baseline.
+        \item Define failure modes (closed eye, occlusion, glare) and the corresponding ``recapture'' prompts.
+    \end{itemize}
+
+    \textbf{4.2 Anemia classification}
+    \begin{itemize}[leftmargin=1.5em]
+        \item Fine-tune EfficientNet-B0, ResNet-50, and MobileNetV2 on the combined CP-AnemiC and Eyes-DEFY-ANEMIA datasets with augmentation.
+        \item Report accuracy, AUC, sensitivity, specificity, and on-device latency / model size.
+    \end{itemize}
+
+    \textbf{4.3 Attention verification with GradCAM}
+    \begin{itemize}[leftmargin=1.5em]
+        \item Generate GradCAM overlays for every prediction.
+        \item Define an attention-on-conjunctiva criterion and flag predictions whose attention falls outside the ROI as low confidence.
+        \item Show qualitative success and failure cases.
+    \end{itemize}
+
+    \textbf{4.4 Risk band and referral recommendation}
+    \begin{itemize}[leftmargin=1.5em]
+        \item Map continuous classifier output into ``low / moderate / high risk --- refer for CBC.''
+        \item Justify thresholds against published cut-offs and the prenatal-care decision context.
+    \end{itemize}
+
+    \textbf{4.5 Platform integration}
+    \begin{itemize}[leftmargin=1.5em]
+        \item Describe the screening-module UI within ALIVE: capture, infer, overlay, recommend.
+        \item Argue that platform integration is a substantive contribution because it converts a research notebook into a fielded workflow.
+    \end{itemize}
+
+    \subsection{5. Preliminary Evaluation Plan}
+
+    \begin{itemize}[leftmargin=1.5em]
+        \item \textbf{Technical:} classifier accuracy, AUC, sensitivity, specificity on hold-out and cross-validation splits of CP-AnemiC and Eyes-DEFY-ANEMIA; on-device latency and model size for each architecture.
+        \item \textbf{Explainability:} qualitative GradCAM analysis showing correct conjunctival focus and identified failure modes.
+        \item \textbf{Workflow walkthrough:} simulated BHW prenatal-visit scenarios using the platform UI, with timing and usability notes if feasible.
+        \item \textbf{Cost framing:} \$0 incremental equipment cost (existing BHW smartphone) versus \$5K--50K hematology analyzer or \$2--10 per manual hemoglobin test.
+        \item \textbf{Claim boundary:} present the system as a prototype with preliminary evaluation, not as a clinically validated screening intervention. Validation on Philippine-population imagery is identified as necessary future work.
+    \end{itemize}
+
+    \subsection{6. Discussion}
+
+    \begin{itemize}[leftmargin=1.5em]
+        \item Emphasize that the paper's value is not a new backbone but a deployable screening module wrapped around a mature classifier.
+        \item Discuss limitations: dataset size ($\sim$930 images), cross-device generalization, lack of Philippine-population validation, and the absence of longitudinal hemoglobin trend data.
+        \item Discuss future work: hemoglobin regression instead of binary classification, larger locally collected datasets, and longitudinal follow-up across pregnancy.
+        \item Reiterate why this narrative fits a pervasive-health and point-of-care deployment paper.
+    \end{itemize}
+
+    \subsection{7. Conclusion}
+
+    Summarize the paper as a shift from ``can a CNN classify conjunctival anemia?'' to ``what does it take to put that classifier into the hands of a barangay health worker during a prenatal home visit?''
+
+    \end{document}
