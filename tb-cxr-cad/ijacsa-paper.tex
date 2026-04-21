@@ -194,7 +194,7 @@ During scoping, several candidate features were considered and excluded from the
 A \textbf{dedicated trainee or educational mode}---a separate view reformatting AI output for medical students, residents, or non-radiologist physicians---was considered as an additional module. Usability testing of CXR AI tools has reported that such tools may be especially valuable in trainee and non-radiologist settings~\cite{cheung2022uai}, and research on AI in radiology education has explored how tools can deliver personalized feedback and structured learning for learners~\cite{chaves2023ai_radiology_education, mazurowski2019ai_precision_education}. However, a targeted search for primary evidence of end-user demand---surveys, focus groups, or co-design workshops in which residents, clinical officers, or radiographers explicitly requested a dedicated trainee mode inside a CXR AI tool---did not surface clear findings. The evidence that exists is indirect: residents broadly want AI literacy in their curricula and TB CAD implementers have requested more theoretical training about CAD itself, but these signals call for external AI education rather than a distinct in-tool trainee feature. A separate line of evidence complicates the case further: a study of residents using AI as a second reader for chest radiograph interpretation found that AI assistance improved sensitivity and accuracy while the tool was available, but these gains disappeared once AI was removed, suggesting dependence rather than durable skill transfer~\cite{chassagnon2023learning}. A naively implemented trainee mode could reinforce the same failure pattern. For these reasons, trainee-oriented functionality is folded into the multimodal explanation module---which already generates natural-language descriptions accessible to less-experienced readers---rather than being developed as a separate module. A dedicated trainee mode is retained as a future-work direction, subject to primary user research and a study design that directly measures learning rather than performance during assistance.
 
 Other candidate features excluded from scope include full autonomous report generation (treated as too ambitious for a prototype and adjacent to ongoing research~\cite{siemens_llm_cxr_2023, lee2024cxr_llava}), formal cost-effectiveness modeling (requires local pilot data that was not available at the time of writing), and support for smartphone-captured analog radiographs (raises domain-shift concerns that deserve dedicated evaluation~\cite{nasser2023photographed}). These are retained as future-work directions in Section~VII.
-
+%  todo: add figure
 % ============================================================
 % III. SYSTEM ARCHITECTURE
 % ============================================================
@@ -218,15 +218,13 @@ The system processes a chest X-ray through a sequential pipeline:
 
 \subsection{TB Scoring Module}
 
-The TB scoring module is the diagnostic backbone. It is a deep learning classifier trained on publicly available CXR datasets to distinguish radiographs with findings suggestive of pulmonary TB from those without.
+The TB scoring module is the diagnostic backbone. It is implemented as an object-detection network that produces bounding boxes localizing TB-related regions on a chest radiograph, alongside per-region probabilities and an image-level TB score. Object detection is a form of deep learning in which the model learns to both classify and spatially localize visual findings---in this case, regions suggestive of active or latent tuberculosis.
 
-Deep learning is a form of machine learning in which a computational model learns to recognize patterns in data by processing an image through many successive layers of mathematical transformations. Early layers detect basic features such as edges and textures; deeper layers learn to recognize anatomical structures and pathological patterns such as infiltrates, cavities, or consolidation. The model is trained by exposure to thousands of labeled radiographs---images marked as TB-positive or TB-negative by expert readers---and adjusts its internal parameters to minimize classification errors on the training set.
+We adopt the detector baselines released with the TBX11K benchmark~\cite{liu2020tbx11k, liu2023tbx11k_pami}, specifically a Faster R-CNN with a ResNet-50 backbone as the primary architecture, with the transformer-based SymFormer variant~\cite{liu2023tbx11k_pami} retained as a stretch baseline. Faster R-CNN was chosen for feasibility: it is well-documented, has reference training configurations released in the associated public repository, and its detection output format (axis-aligned bounding boxes with class probabilities) is directly compatible with the downstream explanation module. This module is not a contribution of this paper; it is used as an established component consistent with WHO's finding that multiple TB CAD products already meet screening performance standards~\cite{who_cad_approval_2025}.
 
-The architecture follows approaches established in prior work on deep learning for TB detection on CXR~\cite{lakhani2017deep, pasa2019efficient}. This module is not a contribution of this paper; it is treated as a mature component consistent with WHO's finding that multiple products already meet screening performance standards~\cite{who_cad_approval_2025}.
+The model is trained on \textbf{TBX11K}, a public dataset of 11,200 chest radiographs with expert-annotated bounding boxes for active-TB and latent-TB regions~\cite{liu2020tbx11k}. TBX11K was selected because (i) it is paired with reference detector baselines in the same publication, so reported detection metrics transfer cleanly; (ii) its canonical 6,600 / 1,800 / 2,800 training, validation, and test split supports reproducible evaluation; and (iii) it is the largest publicly available TB-specific CXR dataset with region-level annotations. For finer-grained finding labels used by the explanation module---such as cavity, consolidation, infiltrate, and pleural effusion---we additionally use the Shenzhen TB annotation set~\cite{yang2022shenzhen_annotations}, which supplies pixel-level masks for 19 abnormality types on 336 TB-positive cases.
 
-% TODO: Specify exact model architecture, training dataset, and baseline performance metrics.
-
-The module produces two outputs per image: (1) a continuous TB probability score between 0 and 1, and (2) a spatial activation map indicating which image regions most strongly influenced the prediction. The score feeds threshold-based classification; the activation map provides spatial input for the explanation module.
+Because the TBX11K annotation schema labels regions as \textit{active\_tb} or \textit{latent\_tb} rather than as specific findings (e.g., ``cavitation''), the system performs a second pass: each detected TB region is intersected with a pretrained anatomical lung-zone segmentation~\cite{cohen2022torchxrayvision} to obtain an anatomical descriptor (lung side and zone), and with the Shenzhen finding taxonomy to obtain a candidate finding label. The final per-image output consists of (1) an image-level TB probability score, (2) a list of detected regions with bounding-box coordinates, TB-type class probability, anatomical zone, and candidate finding label, and (3) a spatial activation map retained for the heatmap overlay.
 
 % ============================================================
 % IV. RELIABILITY LAYER COMPONENTS
@@ -246,25 +244,23 @@ The input quality gate evaluates each radiograph before it reaches the classifie
     \item \textbf{Manual review required:} non-standard input (photographed analog film, lateral view, non-chest image). The case is routed to human review.
 \end{itemize}
 
-The gate evaluates field of view, patient positioning, exposure level, sharpness, and input format. This is motivated by evidence that CXR AI performance degrades when applied to images differing from the training distribution. A systematic review of cross-population domain shift found that 81\% of deep learning algorithms in radiology exhibited decreased accuracy on external datasets~\cite{domain_shift_cxr_2025}, and shortcut learning---where models rely on acquisition artifacts rather than pathological features---has been documented as a failure mode in CXR AI~\cite{degrave2021shortcut, mongan2023review}. In settings where imaging equipment and acquisition protocols vary widely across facility levels, input quality screening is particularly relevant.
+The gate is a hybrid pipeline combining DICOM header checks, a learned view classifier, and an anatomical-segmentation-based sanity check. Concretely: (i) DICOM tags (\texttt{ViewPosition}, \texttt{BodyPartExamined}, \texttt{PhotometricInterpretation}) are read first; any study with a non-frontal \texttt{ViewPosition} is routed to manual review, and inconsistent \texttt{BodyPartExamined} triggers a rejection. (ii) For cases lacking reliable DICOM headers, a small view classifier trained on frontal / lateral labels from PadChest~\cite{bustos2020padchest} serves as a fallback. (iii) The image is passed through the pretrained anatomical segmentation network from the \texttt{torchxrayvision} library~\cite{cohen2022torchxrayvision}, which produces per-pixel masks for left lung, right lung, heart, and other thoracic structures. The gate computes three summary statistics from these masks: the lung-area-to-image-area ratio (a field-of-view score, flagging clipped fields), the lateral offset of the lung centroid relative to image center (a rotation proxy), and the presence of both lung masks above a minimum area (a non-chest-image check). (iv) Classical image statistics---Laplacian variance for blur and 1st/99th percentile intensity gaps for under- or over-exposure---are thresholded on development data and added to the rule set. The combined rules map each image to one of the four status labels above.
 
-% TODO: Specify quality gate implementation (rule-based vs. learned, thresholds).
+This design is motivated by evidence that CXR AI performance degrades when applied to images differing from the training distribution. A systematic review of cross-population domain shift found that 81\% of deep learning algorithms in radiology exhibited decreased accuracy on external datasets~\cite{domain_shift_cxr_2025}, and shortcut learning---where models rely on acquisition artifacts rather than pathological features---has been documented as a failure mode in CXR AI~\cite{degrave2021shortcut, mongan2023review}. The gate is engineered rather than novel; it is cited as prior art that a clinically adequate CXR screening system has a well-defined acquisition-quality model upstream of inference.
 
 \subsection{Uncertainty-Aware Deferral}
 
 Standard CAD systems compare a numeric score against a threshold to produce a binary classification. Cases near the threshold receive the same definitive output as distant cases, despite lower reliability.
 
-The deferral module introduces ``uncertain'' as an explicit output. A case is classified as uncertain when:
+The deferral module introduces ``uncertain'' as an explicit output by combining a calibrated score threshold with an out-of-distribution (OOD) check. Three mechanisms are used in sequence:
 
 \begin{itemize}
-    \item \textbf{Threshold proximity:} the TB score falls within a configurable margin around the decision threshold.
-    \item \textbf{Borderline input quality:} the quality gate flagged acquisition concerns.
-    \item \textbf{Out-of-distribution indicators:} the image's statistical properties differ substantially from the training distribution.
+    \item \textbf{Calibration.} Raw detector scores are passed through temperature scaling~\cite{guo2017calibration}, a one-parameter post-hoc calibration method that divides the model's logits by a learned scalar fitted on a held-out validation split. Temperature scaling does not alter the model's ranking of cases but realigns the numeric score so that it approximates a true probability.
+    \item \textbf{Threshold proximity (selective prediction).} A two-sided deferral band is placed around the operating threshold. Cases whose calibrated probability falls inside the band are classified as uncertain, following the selective-prediction framework of Geifman and El-Yaniv~\cite{geifman2017selective}, in which the system is permitted to abstain in exchange for higher accuracy on the remaining cases. Band width is chosen by plotting risk-coverage curves on development data and selecting the width that produces the target balance between automation rate and per-case accuracy.
+    \item \textbf{Out-of-distribution indicators.} An independent OOD check is applied to the image's feature representation using the Mahalanobis-distance method of Lee et al.~\cite{lee2018mahalanobis}, adapted for chest radiography by Anthony and Kamnitsas~\cite{anthony2023mahalanobis_medical}. The Mahalanobis distance from an image's deep features to the class-conditional training-data mean is thresholded; images exceeding the threshold are deferred regardless of their probability score. This catches non-TB, non-CXR, or distributionally unusual inputs that a probability-based rule would otherwise classify confidently.
 \end{itemize}
 
-% TODO: Specify out-of-distribution detection method and threshold calibration approach.
-
-Uncertain cases are not suppressed. The system presents the TB score and all evidence alongside an explicit uncertainty warning and a recommendation for human review. The intent is to prevent overconfident automation on cases where reliability is low. This design is supported by research on uncertainty quantification in medical AI, which argues that communicating model uncertainty and enabling abstention on ambiguous cases can improve both safety and clinician trust~\cite{kompa2021uncertainty, muehlematter2024uq_review}.
+A case is classified as uncertain when any of the above fires, or when the upstream quality gate returned a borderline or manual-review status. Uncertain cases are not suppressed: the system presents the TB score and all evidence alongside an explicit uncertainty warning and a recommendation for human review. The intent is to prevent overconfident automation on cases where reliability is low. This design is supported by research on uncertainty quantification in medical AI, which argues that communicating model uncertainty and enabling abstention on ambiguous cases can improve both safety and clinician trust~\cite{kompa2021uncertainty, muehlematter2024uq_review}.
 
 \subsection{Structured Evidence Interface}
 
@@ -306,40 +302,37 @@ This differs from heatmap-only explanations in two ways. First, it names the fin
 
 \subsubsection{How the Module Works}
 
-The module operates as a post-processing stage. It takes three inputs: the original radiograph, the TB probability score, and the spatial activation map.
+The module operates as a post-processing stage after the TB scoring module has produced bounding boxes and class probabilities. It is deliberately structured as a two-stage pipeline---\emph{structured templating} followed by \emph{large language model (LLM) smoothing}---in which the image itself is withheld from the LLM. This architecture is chosen to prevent the LLM from inventing findings the detector did not produce: because the LLM only receives a structured record of detected regions, it cannot narrate anatomical findings outside that record.
 
-It uses a vision-language model---a type of AI system that processes both images and text---to generate explanations. Vision-language models have been applied in medical imaging for tasks including automated report generation and visual question answering (VQA), where the system answers clinical questions about an image in natural language~\cite{siemens_llm_cxr_2023, li2023llava_med}. Recent work in this area includes CXR-LLaVA, a multimodal model specifically trained for CXR interpretation that achieved competitive performance against general-purpose models on finding identification and report generation~\cite{lee2024cxr_llava}. A review of vision-language models for medical report generation and VQA provides a broader survey of architectures and evaluation approaches in this rapidly developing field~\cite{bazi2024vlm_review}.
+The most closely related published system is the two-stage pipeline of Danu et al.~\cite{siemens_llm_cxr_2023}, in which a multi-class thoracic detector emits class probabilities that are concatenated as a prompt to a domain-adapted LLM (RadBloomz) for report generation. The present architecture takes the same decomposition as prior art but differs in two respects: (1) it restricts the controlled vocabulary to TB-relevant findings rather than a general thoracic taxonomy, and (2) it does not rely on a fine-tuned biomedical LLM, whose weights are not publicly available in the Danu et al. work; instead it uses a generic hosted LLM constrained by prompt and template. The authors of the prior work themselves report that their end-to-end approach suffers from hallucination and repetition in some outputs~\cite{siemens_llm_cxr_2023}, which motivates the grounding-by-construction approach here.
 
-% TODO: Specify exact vision-language model architecture and training/fine-tuning details.
-
-The generation process:
+The generation pipeline is:
 
 \begin{enumerate}
-    \item The activation map is analyzed to identify dominant regions and their anatomical location.
-    \item The region(s), original image, and classifier score are provided to the vision-language model.
-    \item The model generates a statement describing the finding, location, and clinical relevance.
-    \item Output text is constrained to standard radiological terminology and spatially consistent findings.
+    \item \textbf{Anatomical mapping.} Each detected region's bounding-box centroid is intersected with the anatomical lung-zone segmentation from the quality-gate stage~\cite{cohen2022torchxrayvision} to produce an anatomical descriptor (left or right; upper, middle, or lower zone).
+    \item \textbf{Finding assignment.} Each region is mapped to a candidate finding label (e.g., cavity, consolidation, opacity, pleural effusion) drawn from the Shenzhen TB abnormality taxonomy~\cite{yang2022shenzhen_annotations}. In cases where the TB detector flags only \textit{active\_tb} or \textit{latent\_tb} without a specific finding type, a secondary finding classifier trained on the Shenzhen annotations produces a label.
+    \item \textbf{Templated sentence generation.} Each (finding, anatomical zone, probability) triple is slot-filled into a controlled sentence template, producing a deterministic structured record in the form \textit{``\{finding\} in \{zone\} ({prob:.0\%} confidence).''}
+    \item \textbf{Natural-language smoothing.} The structured list of template sentences is passed---without the radiograph image---to a hosted general-purpose LLM with a system prompt that instructs it to rewrite the list as a single fluent clinical paragraph, add no findings absent from the list, and preserve anatomical and probability information verbatim.
+    \item \textbf{Post-hoc verification.} Output text is parsed with a named-entity recognition pass to check that every finding mentioned in the output appears in the input list. Outputs with unsupported entities are rejected and replaced by the deterministic templated text alone.
 \end{enumerate}
 
 \subsubsection{Positioning and Limitations}
 
-This module is a prototype, not a clinically validated explanation system. The generated explanations have not been evaluated against expert radiologist interpretations in a clinical trial. A research precedent exists in work by Siemens on converting detected CXR abnormalities into report text using a fine-tuned language model~\cite{siemens_llm_cxr_2023}. However, this capability does not appear deployed in any reviewed commercial product. The contribution is therefore a prototype implementation of a feature direction that is technically grounded but has not yet reached clinical deployment.
+This module is a prototype, not a clinically validated explanation system. The generated explanations have not been evaluated against expert radiologist interpretations in a clinical trial. The grounding-by-construction approach reduces but does not eliminate error: templated sentences can still propagate incorrect detector outputs (the explanation is only as correct as the detector's boxes), and the LLM smoothing step could in principle paraphrase findings in ways that shift clinical meaning, which is why the post-hoc verification step is included. The contribution is therefore a prototype implementation of a feature direction that is technically grounded but has not yet reached clinical deployment.
 
 \subsection{Post-Deployment Monitoring}
 
-The monitoring module tracks operational metrics to detect behavioral changes after deployment:
+The monitoring module tracks operational metrics to detect behavioral changes after deployment. The metric set is organized into five groups and draws on both the academic literature on post-deployment medical-AI monitoring~\cite{finlayson2021shift, feng2022continual, merkow2024drift, rudolph2024postdeploy_cxr} and metrics published by existing TB CAD products~\cite{qxr_docs, cad4tb_product, lunit_product}.
 
 \begin{itemize}
-    \item \textbf{Input quality distribution:} proportion by quality status over time.
-    \item \textbf{Uncertain-case rate:} proportion flagged by the deferral module.
-    \item \textbf{Deferral rate:} proportion routed to human review.
-    \item \textbf{Threshold-borderline rate:} proportion within the uncertainty margin.
-    \item \textbf{Override rate:} proportion where clinicians disagreed with the classification.
-    \item \textbf{Score distribution drift:} changes in TB score distributions over time.
-    % TODO: Add subgroup breakdowns (by facility, clinician type) if data permits.
+    \item \textbf{Input-side:} daily case volume; image-quality-gate rejection rate; distribution of quality statuses over time; scanner, site, and demographic mix relative to the training distribution.
+    \item \textbf{Prediction-side:} TB-score distribution with summary statistics; flag rate (proportion above threshold); per-finding count trajectory; and calibration metrics (reliability diagram, Brier score) on any subset with confirmed ground truth.
+    \item \textbf{Outcome-side:} radiologist override rate; CAD--human discordance rate; and---for deployments tied into the TB care pathway---the bacteriologically confirmed TB yield among CAD-positive cases and the cascade completion rate through sputum testing and treatment initiation. Confirmed yield is explicitly called for in WHO TB screening guidance~\cite{who_screening_2021}.
+    \item \textbf{Drift:} Population Stability Index (PSI) and Kolmogorov--Smirnov statistics on TB-score distributions, with PSI $< 0.1$ considered stable, $0.1$--$0.25$ flagged for investigation, and $\geq 0.25$ treated as a major shift~\cite{feng2022continual}. Maximum Mean Discrepancy or energy distance is computed on image-embedding features for higher-dimensional drift detection~\cite{merkow2024drift, ghosh2024drift}.
+    \item \textbf{Fairness:} sensitivity, specificity, and positive predictive value stratified by clinically relevant subgroups (age band, sex, HIV status where captured, site, scanner manufacturer and model, and image-quality-gate status), with confidence intervals computed per subgroup. Alerts are raised when a subgroup's performance deviates from the overall estimate by more than two standard errors. Subgroup performance reporting is required by regulatory guidance on AI-enabled medical devices, including the FDA's final Predetermined Change Control Plan guidance~\cite{fda_postmarket}.
 \end{itemize}
 
-The dashboard provides visibility for administrators and quality assurance staff. It does not autonomously adjust system behavior; it enables human intervention when metrics indicate degradation or drift. Reviews of medical imaging AI consistently identify post-deployment monitoring as a gap~\cite{mongan2023review}, and the FDA has established research programs focused on out-of-distribution detection, proactive drift monitoring, and real-world evaluation of AI model performance after deployment~\cite{fda_postmarket}. A post-deployment study of a deep learning CXR classification algorithm found measurable performance variation across deployment sites, underscoring the need for continuous monitoring infrastructure~\cite{rudolph2024postdeploy_cxr}. This module addresses that gap within the specific context of hospital TB screening.
+The dashboard provides visibility for administrators and quality assurance staff. It does not autonomously adjust system behavior; it enables human intervention when metrics indicate degradation or drift. Reviews of medical imaging AI consistently identify post-deployment monitoring as a gap~\cite{mongan2023review}, and a post-deployment study of a deep learning CXR classification algorithm found measurable performance variation across deployment sites, underscoring the need for continuous monitoring infrastructure~\cite{rudolph2024postdeploy_cxr}. This module addresses that gap within the specific context of hospital TB screening.
 
 % ============================================================
 % V. PRELIMINARY EVALUATION
@@ -506,7 +499,7 @@ E.~Cheung \textit{et al.}, ``U`AI' testing: User interface and usability testing
 A.~J.~DeGrave, J.~D.~Janizek, and S.-I.~Lee, ``AI for radiographic COVID-19 detection selects shortcuts over signal,'' \textit{Nature Machine Intelligence}, vol.~3, pp.~610--619, 2021. [Online]. Available: https://pmc.ncbi.nlm.nih.gov/articles/PMC10047562/
 
 \bibitem{siemens_llm_cxr_2023}
-F.~Rau \textit{et al.}, ``A context-aware approach for generating radiology reports from chest X-rays,'' \textit{arXiv preprint}, 2023. [Online]. Available: https://arxiv.org/html/2306.10448
+M.~D.~Danu, G.~Marica, S.~K.~Karn, B.~Georgescu, A.~Mansoor, F.~Ghesu, L.~M.~Itu, C.~Suciu, S.~Grbic, O.~Farri, and D.~Comaniciu, ``Generation of radiology findings in chest X-ray by leveraging collaborative knowledge,'' \textit{Procedia Computer Science (ITQM 2023)}, 2023. [Online]. Available: https://arxiv.org/abs/2306.10448
 
 \bibitem{li2023llava_med}
 C.~Li \textit{et al.}, ``LLaVA-Med: Training a large language-and-vision assistant for biomedicine in one day,'' \textit{Advances in Neural Information Processing Systems}, 2023. [Online]. Available: https://arxiv.org/abs/2306.00890
@@ -606,6 +599,45 @@ D.~Hua \textit{et al.}, ``Towards human-AI collaboration in radiology: A multidi
 
 \bibitem{chassagnon2023learning}
 G.~Chassagnon \textit{et al.}, ``Learning from the machine: AI assistance is not an effective learning tool for resident education in chest X-ray interpretation,'' \textit{European Radiology}, 2023. [Online]. Available: https://pubmed.ncbi.nlm.nih.gov/37572190/
+
+\bibitem{liu2020tbx11k}
+Y.~Liu, Y.-H.~Wu, Y.~Ban, H.~Wang, and M.-M.~Cheng, ``Rethinking computer-aided tuberculosis diagnosis,'' in \textit{Proc. IEEE/CVF Conf. Computer Vision and Pattern Recognition (CVPR)}, 2020, pp.~2646--2655. [Online]. Available: \url{https://mmcheng.net/tb/}
+
+\bibitem{liu2023tbx11k_pami}
+Y.~Liu, Y.-H.~Wu, S.-C.~Zhang, L.~Liu, M.~Wu, and M.-M.~Cheng, ``Revisiting computer-aided tuberculosis diagnosis,'' \textit{IEEE Trans. Pattern Analysis and Machine Intelligence}, 2023. [Online]. Available: https://arxiv.org/abs/2307.02848
+
+\bibitem{yang2022shenzhen_annotations}
+F.~Yang, P.-X.~Lu, M.~Deng \textit{et al.}, ``Annotations of lung abnormalities in the Shenzhen chest X-ray dataset for computer-aided screening of pulmonary diseases,'' \textit{Data}, vol.~7, no.~7, art.~95, 2022. [Online]. Available: https://www.mdpi.com/2306-5729/7/7/95
+
+\bibitem{cohen2022torchxrayvision}
+J.~P.~Cohen, J.~D.~Viviano, P.~Bertin \textit{et al.}, ``TorchXRayVision: A library of chest X-ray datasets and models,'' in \textit{Proc. Medical Imaging with Deep Learning (MIDL)}, 2022. [Online]. Available: https://arxiv.org/abs/2111.00595
+
+\bibitem{bustos2020padchest}
+A.~Bustos, A.~Pertusa, J.-M.~Salinas, and M.~de la Iglesia-Vay\'{a}, ``PadChest: A large chest X-ray image dataset with multi-label annotated reports,'' \textit{Medical Image Analysis}, vol.~66, art.~101797, 2020. [Online]. Available: https://arxiv.org/abs/1901.07441
+
+\bibitem{guo2017calibration}
+C.~Guo, G.~Pleiss, Y.~Sun, and K.~Q.~Weinberger, ``On calibration of modern neural networks,'' in \textit{Proc. Int. Conf. Machine Learning (ICML)}, 2017, pp.~1321--1330. [Online]. Available: https://arxiv.org/abs/1706.04599
+
+\bibitem{geifman2017selective}
+Y.~Geifman and R.~El-Yaniv, ``Selective classification for deep neural networks,'' in \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2017. [Online]. Available: https://arxiv.org/abs/1705.08500
+
+\bibitem{lee2018mahalanobis}
+K.~Lee, K.~Lee, H.~Lee, and J.~Shin, ``A simple unified framework for detecting out-of-distribution samples and adversarial attacks,'' in \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2018. [Online]. Available: https://arxiv.org/abs/1807.03888
+
+\bibitem{anthony2023mahalanobis_medical}
+H.~Anthony and K.~Kamnitsas, ``On the use of Mahalanobis distance for out-of-distribution detection with neural networks for medical imaging,'' in \textit{MICCAI Workshop on Uncertainty for Safe Utilization of Machine Learning in Medical Imaging (UNSURE)}, 2023. [Online]. Available: \url{https://doi.org/10.1007/978-3-031-44336-7_14}
+
+\bibitem{finlayson2021shift}
+S.~G.~Finlayson \textit{et al.}, ``The clinician and dataset shift in artificial intelligence,'' \textit{New England Journal of Medicine}, vol.~385, pp.~283--286, 2021. [Online]. Available: https://pubmed.ncbi.nlm.nih.gov/34260843/
+
+\bibitem{feng2022continual}
+J.~Feng, R.~V.~Phillips, I.~Malenica \textit{et al.}, ``Clinical artificial intelligence quality improvement: Towards continual monitoring and updating of AI algorithms in healthcare,'' \textit{npj Digital Medicine}, vol.~5, art.~66, 2022. [Online]. Available: https://www.nature.com/articles/s41746-022-00611-y
+
+\bibitem{merkow2024drift}
+J.~Merkow \textit{et al.}, ``Empirical data drift detection experiments on real-world medical imaging data,'' \textit{Nature Communications}, vol.~15, art.~1689, 2024. [Online]. Available: https://www.nature.com/articles/s41467-024-46142-w
+
+\bibitem{ghosh2024drift}
+A.~Ghosh \textit{et al.}, ``Scalable drift monitoring in medical imaging AI,'' \textit{arXiv preprint arXiv:2410.13174}, 2024. [Online]. Available: https://arxiv.org/abs/2410.13174
 
 \end{thebibliography}
 
