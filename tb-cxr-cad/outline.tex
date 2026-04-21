@@ -28,12 +28,12 @@
 \textbf{Baseline TB/CXR model feasibility is largely established}. WHO has recommended CAD for TB screening since 2021 and, in its June 2025 policy update, reported that six CAD products met WHO performance standards for TB screening in people aged 15 years and older. More broadly, chest X-ray AI reviews consistently report strong diagnostic performance across tasks, while a 2024 study found that AI assistance raised physician AUC from 0.773 to 0.874 and helped non-radiologists perform on par with radiologists. In a real-world reporting study, radiologists showed complete agreement with model findings in 86.5\% of reviewed cases, with only 0.5\% of findings deemed missed by the model. Taken together, these results justify treating raw model accuracy and basic feasibility as comparatively solved background for this paper, while shifting attention to the unsolved question of reliable hospital integration.\footnote{WHO policy statement overview, \url{https://www.who.int/publications/i/item/9789240110373}.}\footnote{WHO approval update, \url{https://www.who.int/news/item/11-06-2025-who-approves-six-software-products-for-computer-aided-detection-of-tb-on-chest-x-ray}.}\footnote{Systematic review, \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9955112/}.}\footnote{Pamela G. Anderson et al., ``Deep learning improves physician accuracy in the comprehensive detection of abnormalities on chest X-rays,'' \url{https://www.nature.com/articles/s41598-024-76608-2}.}\footnote{Real-world observational study, \url{https://pubmed.ncbi.nlm.nih.gov/34930738/}.}
 
 
-This paper should be framed as an \emph{academic prototype and workflow implementation} contribution rather than as ``another tuberculosis classifier.'' The central claim is that chest X-ray deep learning for TB is already strong enough to justify a shift in emphasis toward \textbf{reliability safeguards and prototype feature integration for real hospital use}. The proposed system therefore combines \textbf{input quality gating, explicit uncertainty-aware deferral, clinically grounded multimodal explainability, trainee support, and post-deployment monitoring} on top of a mature TB scoring backbone. Systematic and implementation-focused reviews repeatedly note that the value of chest X-ray AI in practice depends not only on accuracy, but also on workflow fit, clinician interaction, local validation, and ongoing quality assurance.
+This paper should be framed as an \emph{academic prototype and workflow implementation} contribution rather than as ``another tuberculosis classifier.'' The central claim is that chest X-ray deep learning for TB is already strong enough to justify a shift in emphasis toward \textbf{prototype feature integration for real hospital use}, with \textbf{clinically grounded multimodal explainability} positioned as the lead contribution and \textbf{input quality gating, explicit uncertainty-aware deferral, and post-deployment monitoring} as supporting workflow layers. The proposed system therefore combines these features on top of a mature TB scoring backbone. Systematic and implementation-focused reviews repeatedly note that the value of chest X-ray AI in practice depends not only on accuracy, but also on workflow fit, clinician interaction, local validation, and ongoing quality assurance.
 
 \textbf{Why this narrative is cohesive:}
 \begin{itemize}[leftmargin=1.5em]
     \item It uses model performance only as background motivation, not as the claimed novelty.
-    \item It unifies the selected features under one layer: \textbf{reliability}. Quality gating protects the input, explicit deferral protects the decision, multimodal explanation protects interpretability, trainee support protects interpretation by less-experienced users, and monitoring protects deployment over time.
+    \item It unifies the selected features under one layer: \textbf{reliability}. Multimodal explanation is the lead user-facing feature, while quality gating protects the input, explicit deferral protects the decision, and monitoring protects deployment over time.
     \item It fits the practical medical deployment angle better than a purely technical CV paper, especially for hospital integration and L1/L2 settings.
 \end{itemize}
 
@@ -64,7 +64,9 @@ Analog-film / smartphone capture for low-resource provinces & Strong L1/L2 relev
 
 \section{Product Comparison}
 
-In particular, we found the clearest market gap for \textbf{trainee mode}, for \textbf{clinically grounded multimodal explanation of findings in natural language}, and for a \textbf{combined user-facing workflow layer} that joins input QA, explicit deferral, explanation, and trainee-oriented support. We found partial evidence of input-quality handling for Siemens through an internal input quality gate, but not comparable clear user-facing evidence in the other reviewed official materials.
+In particular, we found the clearest market gap for \textbf{clinically grounded multimodal explanation of findings in natural language} and for a \textbf{combined user-facing workflow layer} that joins input QA, explicit deferral, and explanation. We found partial evidence of input-quality handling for Siemens through an internal input quality gate, but not comparable clear user-facing evidence in the other reviewed official materials.
+
+This gap requires careful qualification. Some reviewed products already provide textual summaries, structured finding labels, or draft reporting support. However, based on the official materials reviewed for this outline, we did not find clear evidence of a commercially deployed feature that explains a diagnostic conclusion in clinician-facing causal language of the form ``TB suspected because of [finding] in [location].'' The strongest prior evidence comes from Siemens research, which explicitly studies converting detected abnormalities and probabilities into report text with a fine-tuned language model, but this appears in research rather than as a clearly shipped AI-Rad Companion feature. This matters because the same direction appears to be highly desired by users: usability testing of a chest X-ray AI tool reported requests for clearer explanatory support and broader deployment in understaffed radiology departments, trainee settings, and non-radiologist specialties. The contribution in this paper is therefore framed as \emph{prototype implementation}, not clinical validation, of that still-emerging explanation layer.\footnote{Siemens research on LLM-supported chest X-ray reporting: \url{https://arxiv.org/html/2306.10448}.}\footnote{Cheung et al., ``U``AI'' Testing: User Interface and Usability Testing of a Chest X-ray AI Tool in a Simulated Real-World Workflow,'' \url{https://journals.sagepub.com/doi/10.1177/08465371221131200}.}
 
 {\scriptsize
 \begin{longtable}{p{0.21\textwidth} p{0.1\textwidth} p{0.1\textwidth} p{0.1\textwidth} p{0.1\textwidth} p{0.1\textwidth} p{0.1\textwidth}}
@@ -90,9 +92,7 @@ Input QA gate &  &  &  &  & $\checkmark$\footnote{Siemens describes a pre-define
 
 Explicit uncertainty / deferral &  &  &  &  & $\checkmark$\footnote{Siemens presents AI-confidence scores and thresholded highlighting, but not an explicit deferral workflow: \url{https://academy.siemens-healthineers.com/_/en-us/chest-x-ray-confirmation-workflow/}.} & $\checkmark$\footnote{Proposed uncertainty-aware deferral module in this paper outline.} \\
 
-Natural-language multimodal explanation &  &  &  &  &  & $\checkmark$\footnote{Proposed clinically grounded multimodal explainability layer: a VQA / natural-language explanation module for findings in this academic prototype.} \\
-
-Trainee mode &  &  &  &  &  & $\checkmark$\footnote{Proposed trainee support mode in this paper outline.} \\
+Natural-language multimodal explanation &  &  &  &  &  & $\checkmark$\footnote{Proposed clinically grounded multimodal explainability layer: a VQA / natural-language explanation module for findings in this academic prototype. Official materials reviewed for the listed commercial products did not clearly show a deployed feature that explains diagnostic conclusions in clinician-facing causal language. Siemens has published research in this direction, but we treat that as a research precedent rather than a clearly deployed commercial feature: \url{https://arxiv.org/html/2306.10448}.} \\
 \bottomrule
 \end{longtable}
 }
@@ -101,7 +101,7 @@ Trainee mode &  &  &  &  &  & $\checkmark$\footnote{Proposed trainee support mod
 
 \subsection{One-Sentence Claim}
 
-We propose a \textbf{prototype reliability-centered workflow layer} for tuberculosis CAD on chest X-ray that improves hospital deployability by screening poor-quality inputs, explicitly deferring uncertain cases, explaining findings in natural language, and supporting trainee or non-radiologist use, rather than claiming novelty in the underlying TB classifier itself. Post-deployment monitoring is retained as a supporting operational layer.
+We propose a \textbf{prototype reliability-centered workflow layer} for tuberculosis CAD on chest X-ray that improves hospital deployability by adding a clinician-facing multimodal explanation layer for findings in natural language, while also screening poor-quality inputs and explicitly deferring uncertain cases, rather than claiming novelty in the underlying TB classifier itself. Post-deployment monitoring is retained as a supporting operational layer.
 
 \subsection{Reliability Layer Modules}
 
@@ -112,11 +112,10 @@ We propose a \textbf{prototype reliability-centered workflow layer} for tubercul
 
 \textbf{New workflow-layer modules proposed in this paper:}
 \begin{enumerate}[leftmargin=1.8em]
+    \item \textbf{Clinically grounded multimodal explainability module.} Add a VQA / natural-language explanation layer that translates model findings into user-facing textual explanations of suspected abnormalities and their visual basis. This is the lead prototype feature in the paper. The novelty claim is deliberately narrow: not that no product has any text output, but that we did not find clear evidence in the reviewed official materials of a deployed feature that explains diagnostic conclusions in clinician-facing causal language. Siemens has published research directly in this direction, which makes the feature technically credible, but that prior work appears to remain in the research-to-product gap.\footnote{Siemens research precedent: \url{https://arxiv.org/html/2306.10448}.}
     \item \textbf{Input QA module.} Detect poor positioning, clipped lungs, rotation, poor exposure, blur, and non-standard inputs such as photographed films. If quality is inadequate, the system warns, recommends reacquisition, or routes the case to manual review. This is justified by the known effect of acquisition quality and domain shift on chest X-ray AI reliability.\footnote{Mongan et al., \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10128969/}.}\footnote{Generalization and shortcut-learning concerns: \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10047562/}.}
     \item \textbf{Uncertainty / deferral module.} Present ``uncertain'' as an explicit output state for near-threshold, low-quality, or out-of-distribution cases. This turns thresholding into a safety mechanism rather than the headline contribution. In the reviewed official product materials, we did not find comparably clear evidence of an explicit user-facing deferral workflow. The usability literature supports the need to communicate model confidence carefully.\footnote{Oakden-Rayner et al., \url{https://pubmed.ncbi.nlm.nih.gov/36189838/}.}
     \item \textbf{Structured evidence interface.} Show score, threshold band, quality status, and localized visual evidence in a compact panel.
-    \item \textbf{Clinically grounded multimodal explainability module.} Add a VQA / natural-language explanation layer that translates model findings into user-facing textual explanations of suspected abnormalities and their visual basis. This is now treated as an officially proposed prototype feature rather than a rejected narrative, with the paper framed around implementation rather than mature clinical validation.
-    \item \textbf{Trainee support mode.} Add a second view that explains what the system flagged, how quality issues affect trust, and what a junior clinician should inspect first. This can be implemented as a lightweight UI layer and is explicitly a secondary contribution tied to usability and teachability. In the reviewed official product materials, we did not find clear evidence of a comparable trainee-facing clinical mode. This is also consistent with usability testing in which many users suggested AI chest X-ray tools would be more useful in understaffed radiology departments or for trainees and non-radiologist specialties.\footnote{Cheung et al., ``U``AI'' Testing: User Interface and Usability Testing of a Chest X-ray AI Tool in a Simulated Real-World Workflow,'' users suggested deployment in understaffed radiology departments and for trainees/non-radiologist specialties, \url{https://journals.sagepub.com/doi/10.1177/08465371221131200}.}
     \item \textbf{Post-deployment monitoring module.} Track rates of poor-quality inputs, uncertain cases, deferrals, threshold-borderline cases, reviewer overrides, and possible drift in score distributions over time. Reviews and vendor messaging both support the need for post-launch monitoring, but this is treated here as a supporting operational layer rather than the clearest novelty claim.\footnote{Mongan et al., \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10128969/}.}\footnote{Lunit INSIGHT CXR / monitoring positioning, \url{https://www.lunit.io/en/ai-radiology-software/insight-cxr/}.}
 \end{enumerate}
 
@@ -126,7 +125,6 @@ We propose a \textbf{prototype reliability-centered workflow layer} for tubercul
     \item \textbf{It is cohesive.} The feature set is not a grab bag if framed around one pipeline: \emph{check the input, qualify the prediction, and monitor the system after deployment.}
     \item \textbf{It is implementable this month.} A quality gate, uncertainty rule, and monitoring interface are much more feasible than building a clinically faithful multimodal explanation engine.
     \item \textbf{It is evidence-backed.} The literature repeatedly identifies real-world workflow integration, local evaluation, and post-launch monitoring as unresolved problems in chest radiography AI.\footnote{Mongan et al., \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC10128969/}.}\footnote{Systematic review, \url{https://pmc.ncbi.nlm.nih.gov/articles/PMC9955112/}.}
-    \item \textbf{It leaves room for a secondary trainee contribution.} The same interface can expose a learner-facing view without requiring a separate educational AI model.
     \item \textbf{Why not make it only a monitoring paper?} A monitoring-only contribution is feasible, but too thin on its own because post-deployment metrics need upstream events to observe. In practice, the most meaningful things to monitor are exactly the outputs of the QA and uncertainty layers, so a broader workflow-layer framing is stronger and better integrated.
 \end{itemize}
 
@@ -155,7 +153,7 @@ We propose a \textbf{prototype reliability-centered workflow layer} for tubercul
 
 \subsection{2. System Framing and Design Goals}
 
-\textbf{Prototype-oriented research question:} Can an academic prototype that integrates input QA, uncertainty-aware deferral, clinically grounded multimodal explanation, trainee support, and monitoring on top of a mature TB CAD backbone provide a more implementation-ready hospital screening workflow than a classifier-only baseline under preliminary evaluation?
+\textbf{Prototype-oriented research question:} Can an academic prototype that integrates clinician-facing multimodal explanation, input QA, uncertainty-aware deferral, and monitoring on top of a mature TB CAD backbone provide a more implementation-ready hospital screening workflow than a classifier-only baseline under preliminary evaluation?
 
 \textbf{Design goals:}
 \begin{enumerate}[leftmargin=1.8em]
@@ -163,14 +161,16 @@ We propose a \textbf{prototype reliability-centered workflow layer} for tubercul
     \item Avoid overconfident automation by explicitly deferring uncertain cases.
     \item Provide clinically grounded explanations of flagged findings in natural language.
     \item Present evidence in a compact workflow-friendly interface.
-    \item Support junior clinicians without depending on full report generation.
     \item Monitor deployment quality over time.
 \end{enumerate}
+
+\textbf{Features considered but excluded:} A dedicated trainee or educational mode was considered but excluded from the prototype. A targeted search for primary evidence of end-user demand (surveys, focus groups, or co-design workshops in which residents, clinical officers, or radiographers explicitly requested a dedicated trainee mode in a CXR AI tool) did not surface clear findings; signals that do exist call for external AI curriculum rather than an in-tool trainee feature. Separately, a study of residents reading chest radiographs with AI as a second reader found sensitivity and accuracy gains that disappeared once AI was removed, suggesting dependence rather than durable skill transfer,\footnote{Chassagnon et al., ``Learning from the machine: AI assistance is not an effective learning tool for resident education in chest X-ray interpretation,'' \textit{European Radiology}, 2023, \url{https://pubmed.ncbi.nlm.nih.gov/37572190/}.} so a naively implemented trainee mode could reinforce the same failure pattern. Trainee-oriented functionality is therefore folded into the multimodal explanation module, which already produces natural-language descriptions accessible to less-experienced readers. A dedicated trainee mode is retained as future work pending primary user research and a study design that measures learning rather than assisted performance. Full autonomous report generation, formal cost-effectiveness modeling, and smartphone-captured analog radiograph support are similarly excluded and listed as future directions.
 
 \subsection{3. System Architecture}
 
 \begin{itemize}[leftmargin=1.5em]
     \item Describe data flow from acquisition to QA gate, classifier, uncertainty logic, multimodal explanation layer, UI, and dashboard.
+    \item Make explicit that the explanation layer is the lead prototype addition, with Siemens' prior research serving as technical precedent rather than evidence of an already deployed commercial feature.
     \item Clarify where thresholding appears: as a configurable component inside reliability logic, not the main novelty.
     \item Include a note that photographed-film detection can be treated as a special case under QA and deferral.
 \end{itemize}
@@ -197,17 +197,12 @@ We propose a \textbf{prototype reliability-centered workflow layer} for tubercul
 
 \textbf{5.4 Clinically grounded multimodal explainability}
 \begin{itemize}[leftmargin=1.5em]
-    \item Explain the planned VQA / natural-language explanation layer and the kinds of outputs it should generate for clinicians.
+    \item Explain the planned VQA / natural-language explanation layer and the kinds of outputs it should generate for clinicians, emphasizing clinician-facing reasoning such as linking a suspected TB conclusion to visually localized findings.
+    \item Position Siemens' published research as evidence that this feature direction is technically grounded, while noting that the reviewed official commercial product materials do not yet clearly show this as a deployed radiologist-facing feature.\footnote{Siemens research precedent: \url{https://arxiv.org/html/2306.10448}.}
     \item State explicitly that this is presented as a prototype feature implementation, not as a fully validated clinical explanation system.
 \end{itemize}
 
-\textbf{5.5 Trainee support mode}
-\begin{itemize}[leftmargin=1.5em]
-    \item Present a dual-view interface with extra explanatory cues for learners.
-    \item Frame as secondary contribution in usability/education.
-\end{itemize}
-
-\textbf{5.6 Post-deployment monitoring}
+\textbf{5.5 Post-deployment monitoring}
 \begin{itemize}[leftmargin=1.5em]
     \item Specify metrics: poor-quality input rate, uncertain-case rate, deferral rate, borderline-threshold rate, override rate, repeat-image rate, score drift, and subgroup breakdowns if available.
     \item Argue that this is more TB hospital-specific than generic enterprise analytics, and note that this monitoring layer could be described as the narrowest standalone contribution if the project scope needs to be reduced further.
@@ -219,13 +214,13 @@ We propose a \textbf{prototype reliability-centered workflow layer} for tubercul
     \item \textbf{Technical:} classifier performance, quality gate accuracy, uncertainty behavior, explanation examples, and failure-mode examples.
     \item \textbf{Prototype workflow evaluation:} simulated hospital cases, clinician or student walkthroughs, qualitative usability feedback, and timing measures if feasible.
     \item \textbf{Reliability outcomes:} proportion of cases filtered by QA, proportion deferred, override behavior, and what failure modes are caught by the safeguards.
-    \item \textbf{Claim boundary:} present the system as an academic prototype with preliminary evaluation, not as a clinically validated workflow intervention.
+    \item \textbf{Claim boundary:} present the system as an academic prototype with preliminary evaluation, not as a clinically validated workflow intervention; in particular, explainability results should be framed as implementation and example outputs rather than as proof of clinical reasoning validity.
 \end{itemize}
 
 \subsection{6. Discussion}
 
 \begin{itemize}[leftmargin=1.5em]
-    \item Emphasize that the paper's value is not a new backbone but a richer prototype implementation layer around mature TB CAD.
+    \item Emphasize that the paper's value is not a new backbone but a richer prototype implementation layer around mature TB CAD, with multimodal explanation as the lead feature.
     \item Explain why thresholding alone was not selected as the main contribution, even though local thresholds remain important.\footnote{WHO calibration guidance, \url{https://wkc.who.int/resources/publications/i/item/determining-the-local-calibration-of-computer-assisted-detection-(cad)-thresholds-and-other-parameters}.}\footnote{Philippine qXR study, \url{https://bmcglobalpublichealth.biomedcentral.com/articles/10.1186/s44263-025-00198-y}.}
     \item Explain why cost-effectiveness and smartphone-film workflows are future directions unless supported by stronger local data.
     \item Reiterate why this narrative fits a practical medical deployment paper.
@@ -233,6 +228,6 @@ We propose a \textbf{prototype reliability-centered workflow layer} for tubercul
 
 \subsection{7. Conclusion}
 
-Summarize the paper as a shift from ``can TB CAD classify chest X-rays?'' to ``how can an academic prototype integrate reliability, explanation, and trainee-facing features around mature TB CAD for hospital workflow use?''
+Summarize the paper as a shift from ``can TB CAD classify chest X-rays?'' to ``how can an academic prototype integrate reliability and clinician-facing explanation around mature TB CAD for hospital workflow use?''
 
 \end{document}
